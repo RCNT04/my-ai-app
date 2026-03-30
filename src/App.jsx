@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'ยินดีด้วยครับเพื่อนบอล! Gemini 3.1 พร้อมทำงานแล้ว ช่องอัปโหลดไฟล์กลับมาแล้วครับบ!' }
+    { role: 'assistant', content: 'ยินดีด้วยครับเพื่อนบอล! Gemini 3.1 พร้อมทำงานแล้ว ช่องอัปโหลดไฟล์กลับมาแล้วครับ!' }
   ]);
   const [inputText, setInputText] = useState('');
   const [knowledgeBase, setKnowledgeBase] = useState(''); // เก็บข้อมูลจากไฟล์ที่อัปโหลด
