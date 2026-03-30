@@ -12,7 +12,7 @@ const App = () => {
   const messagesEndRef = useRef(null);
 
   // 🚨 🚨 เอา API KEY ใหม่ที่ก๊อปมา วางแทนที่รหัสข้างล่างนี้เป๊ะๆ เลยครับ 🚨 🚨
-  const apiKey = "วาง_API_KEY_ใหม่ของเพื่อนบอลตรงนี้";
+  const apiKey = "AIzaSyALw-UizoyFLREegE_I6BaUgXNIYhF41DM";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
