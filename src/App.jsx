@@ -10,7 +10,7 @@ const App = () => {
   const messagesEndRef = useRef(null);
 
   // 🚨 1. ใส่ API Key ใหม่ซิงๆ ของคุณบอลในฟันหนูนี้ (ห้ามมีช่องว่าง ห้ามมี ;)
-  const myKey="AIzaSyDXwSslQS5k6rXe0KNMQoelACPlhfkeekI";
+  const myKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
