@@ -29,9 +29,7 @@ const App = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   
-  // ⚠️ ข้อควรระวัง: ตอนเอาไปรันใน VS Code ของตัวเอง 
-  // ให้เปลี่ยนบรรทัดล่างนี้เป็น const apiKey = import.meta.env.VITE_GEMINI_API_KEY || ""; นะครับ
-  const apiKey = ""; 
+const apiKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
