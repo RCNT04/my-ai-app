@@ -29,7 +29,7 @@ const App = () => {
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
   
-const apiKey = "AIzaSyC1EOfDaaeoH_oRNtQGoXxtmALqF-Vm-mQ";
+const apiKey = "AIzaSyALw-UizoyFLREegE_I6BaUgXNIYhF41DM";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
