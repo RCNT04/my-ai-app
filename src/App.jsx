@@ -75,7 +75,7 @@ const apiKey = "AIzaSyALw-UizoyFLREegE_I6BaUgXNIYhF41DM";
       systemInstruction: { parts: [{ text: systemPrompt }] }
     };
 
-    const url = https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey};
+    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
 
     for (let i = 0; i < 5; i++) {
       try {
