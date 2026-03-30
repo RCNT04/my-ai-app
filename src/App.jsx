@@ -2,14 +2,17 @@ import React, { useState, useEffect, useRef } from 'react';
 
 const App = () => {
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'สวัสดีครับเพื่อนบอล! ผมกลับมาแล้ว รอบนี้ต้องได้คุยกันแน่นอน!' }
+    { role: 'assistant', content: 'ยินดีด้วยครับเพื่อนบอล! Gemini 3.1 พร้อมทำงานแล้ว ช่องอัปโหลดไฟล์กลับมาแล้วครับ!' }
   ]);
   const [inputText, setInputText] = useState('');
+  const [knowledgeBase, setKnowledgeBase] = useState(''); // เก็บข้อมูลจากไฟล์ที่อัปโหลด
   const [isGenerating, setIsGenerating] = useState(false);
   const [error, setError] = useState(null);
+  const [language, setLanguage] = useState('Thai'); // ช่องเปลี่ยนภาษา
+
   const messagesEndRef = useRef(null);
 
-  // 🚨 1. ใส่ API Key ใหม่ซิงๆ ของคุณบอลในฟันหนูนี้ (ห้ามมีช่องว่าง ห้ามมี ;)
+  // 🚨 ดึงรหัสจาก Vercel Environment Variables (ที่เราตั้งค่าไว้ VITE_GEMINI_API_KEY)
   const myKey = import.meta.env.VITE_GEMINI_API_KEY;
 
   const scrollToBottom = () => {
@@ -19,6 +22,18 @@ const App = () => {
   useEffect(() => {
     scrollToBottom();
   }, [messages, isGenerating]);
+
+  // ฟังก์ชันอ่านไฟล์ที่อัปโหลด
+  const handleFileUpload = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      setKnowledgeBase(event.target.result);
+      alert('บันทึกข้อมูลเข้าฐานความรู้เรียบร้อย! ถามจากไฟล์ได้เลยครับ');
+    };
+    reader.readAsText(file);
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -31,25 +46,23 @@ const App = () => {
     setError(null);
 
     try {
-      // 🚨 2. ใช้ URL แบบมาตรฐานที่สุด (ตัด models/ ออกเพื่อความชัวร์ในบาง Region)
+      // 🚀 ใช้รุ่น 3.1 ตามที่คุณบอลเจอมาล่าสุด!
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${myKey}`;
       
+      const prompt = knowledgeBase 
+        ? `ข้อมูลอ้างอิง: ${knowledgeBase}\n\nกรุณาตอบเป็นภาษา: ${language}\nคำถาม: ${inputText}`
+        : `กรุณาตอบเป็นภาษา: ${language}\nคำถาม: ${inputText}`;
+
       const response = await fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          contents: [{
-            parts: [{ text: inputText }]
-          }]
+          contents: [{ parts: [{ text: prompt }] }]
         })
       });
 
       const data = await response.json();
-
-      if (!response.ok) {
-        // ให้บอทฟ้อง Error จริงๆ จาก Google ออกมาเลยจะได้แก้ถูกจุด
-        throw new Error(`Google บอกว่า: ${data.error?.message || 'เชื่อมต่อไม่ได้'}`);
-      }
+      if (!response.ok) throw new Error(data.error?.message || 'เชื่อมต่อไม่ได้');
 
       const botResponse = data.candidates[0].content.parts[0].text;
       setMessages(prev => [...prev, { role: 'assistant', content: botResponse }]);
@@ -62,31 +75,54 @@ const App = () => {
 
   return (
     <div className="flex flex-col h-screen bg-gray-50 text-black">
-      <header className="bg-white shadow p-4 text-center">
-        <h1 className="text-xl font-bold text-blue-600">SmartDoc AI 🤖</h1>
+      {/* Header พร้อมช่องเลือกภาษาและอัปโหลดไฟล์ */}
+      <header className="bg-white shadow p-4 flex flex-wrap justify-between items-center gap-2">
+        <h1 className="text-xl font-bold text-blue-600">SmartDoc AI 3.1 🤖</h1>
+        
+        <div className="flex items-center space-x-4">
+          <select 
+            value={language} 
+            onChange={(e) => setLanguage(e.target.value)}
+            className="border rounded px-2 py-1 text-sm bg-white"
+          >
+            <option value="Thai">ภาษาไทย</option>
+            <option value="English">English</option>
+          </select>
+
+          <div className="flex items-center space-x-2 border-l pl-4">
+            <span className="text-xs text-gray-500">อัปโหลดไฟล์ (.txt):</span>
+            <input type="file" onChange={handleFileUpload} className="text-xs" />
+          </div>
+        </div>
       </header>
+
+      {/* Chat Area */}
       <main className="flex-1 overflow-y-auto p-4 space-y-4">
         {messages.map((msg, index) => (
           <div key={index} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-            <div className={`max-w-[80%] p-3 rounded-2xl ${msg.role === 'user' ? 'bg-blue-600 text-white' : 'bg-white text-gray-800 shadow-sm border border-gray-100'}`}>
+            <div className={`max-w-[85%] p-4 rounded-2xl shadow-sm ${msg.role === 'user' ? 'bg-blue-600 text-white rounded-br-none' : 'bg-white text-gray-800 border rounded-bl-none'}`}>
               <p className="whitespace-pre-wrap">{msg.content}</p>
             </div>
           </div>
         ))}
-        {isGenerating && <div className="text-center text-blue-500 animate-pulse text-sm">กำลังคิด...</div>}
+        {isGenerating && <div className="text-center text-blue-400 text-xs animate-pulse italic">Gemini 3.1 กำลังวิเคราะห์...</div>}
         {error && <div className="bg-red-50 border border-red-200 text-red-600 p-4 rounded-xl text-center text-sm">{error}</div>}
         <div ref={messagesEndRef} />
       </main>
+
+      {/* Input Footer */}
       <footer className="p-4 bg-white border-t">
         <form onSubmit={handleSubmit} className="flex space-x-2 max-w-4xl mx-auto">
           <input
             type="text"
             value={inputText}
             onChange={(e) => setInputText(e.target.value)}
-            placeholder="พิมพ์ทักทายผมหน่อย..."
-            className="flex-1 border rounded-xl px-4 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
+            placeholder={knowledgeBase ? "ถามเกี่ยวกับไฟล์ที่อัปโหลด..." : "ถามอะไรก็ได้..."}
+            className="flex-1 border rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-blue-500 bg-white"
           />
-          <button type="submit" disabled={isGenerating} className="bg-blue-600 text-white px-6 py-2 rounded-xl hover:bg-blue-700 disabled:opacity-50">ส่ง</button>
+          <button type="submit" disabled={isGenerating} className="bg-blue-600 text-white px-8 py-3 rounded-xl font-bold hover:bg-blue-700 disabled:opacity-50">
+            ส่ง
+          </button>
         </form>
       </footer>
     </div>
