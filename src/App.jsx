@@ -28,8 +28,8 @@ const App = () => {
   
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
-  
-const apiKey = "AIzaSyA0qKIMyXDxOQitGGi1wlysBz1QAU_w1bQ";
+// --- เริ่มก๊อปตั้งแต่บรรทัดนี้ ---
+  const apiKey = "AIzaSyALw-UizoyFLREegE_I6BaUgXNIYhF41DM";
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -39,51 +39,45 @@ const apiKey = "AIzaSyA0qKIMyXDxOQitGGi1wlysBz1QAU_w1bQ";
     scrollToBottom();
   }, [messages, isGenerating]);
 
-  // ฟังก์ชันอัปโหลดไฟล์ (.txt, .csv)
-  const handleFileUpload = (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!inputText.trim() || isGenerating) return;
 
-    if (file.type === "text/plain" || file.type === "text/csv") {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        setKnowledgeBase(prev => prev + (prev ? "\n\n" : "") + event.target.result);
-      };
-      reader.readAsText(file);
-    } else {
-      alert("ตอนนี้รับเฉพาะไฟล์ .txt นะครับเพื่อน! ถ้าเป็น PDF/Excel รบกวน Copy ข้อความมาวางแทนก่อนน้า");
+    const userMessage = { role: 'user', content: inputText };
+    setMessages(prev => [...prev, userMessage]);
+    setInputText('');
+    setIsGenerating(true);
+    setError(null);
+
+    try {
+      // 🚨 ตรวจสอบ URL และ Model Name ให้ดีนะครับเพื่อนบอล!
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+      
+      const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          contents: [{
+            parts: [{ text: inputText }]
+          }]
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error('ขออภัยครับเพื่อน กุญแจ API มีปัญหา หรือ Google ปฏิเสธการเข้าถึง');
+      }
+
+      const data = await response.json();
+      const botResponse = data.candidates[0].content.parts[0].text;
+      
+      setMessages(prev => [...prev, { role: 'assistant', content: botResponse }]);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setIsGenerating(false);
     }
-    e.target.value = null;
   };
-
-  const fetchGeminiResponse = async (userPrompt, context) => {
-    if (!apiKey) {
-      throw new Error("อย่าลืมใส่ API Key นะครับเพื่อน! (ดูที่คอมเมนต์บรรทัดที่ 31)");
-    }
-
-    const systemPrompt = `You are a specialized assistant. 
-    KNOWLEDGE BASE: ${context || "No specific knowledge base provided yet."}
-    
-    INSTRUCTIONS:
-    1. Answer questions ONLY based on the provided KNOWLEDGE BASE if relevant.
-    2. If the knowledge base doesn't contain the answer, politely inform the user.
-    3. Keep answers concise and accurate.
-    4. ALWAYS respond and translate the output into ${outputLanguage} language.`;
-
-    const payload = {
-      contents: [{ parts: [{ text: `Based on the context, answer this: ${userPrompt}` }] }],
-      systemInstruction: { parts: [{ text: systemPrompt }] }
-    };
-
-    const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
-
-    for (let i = 0; i < 5; i++) {
-      try {
-        const response = await fetch(url, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
+// --- สิ้นสุดการก๊อปปี้ -
 
         if (!response.ok) throw new Error('Network response was not ok');
         const data = await response.json();
