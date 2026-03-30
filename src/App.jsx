@@ -32,7 +32,7 @@ const App = () => {
 
     try {
       // 🚨 2. ใช้ URL แบบมาตรฐานที่สุด (ตัด models/ ออกเพื่อความชัวร์ในบาง Region)
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${myKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash:generateContent?key=${myKey}`;
       
       const response = await fetch(url, {
         method: 'POST',
