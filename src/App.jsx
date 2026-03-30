@@ -45,7 +45,7 @@ const App = () => {
     setError(null);
 
     try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash-exp:generateContent?key=${apiKey}`;
+      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash-latest:generateContent?key=${apiKey}`;
       
       // รวมคำถามของผู้ใช้ เข้ากับข้อมูลจากไฟล์ (ถ้ามี)
       const prompt = knowledgeBase 
