@@ -1,35 +1,75 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, Menu, X, Factory, Bot, ShieldCheck } from 'lucide-react';
+import { 
+  Send, 
+  Menu, 
+  X, 
+  Factory, 
+  Bot, 
+  ShieldCheck, 
+  Cpu, 
+  RefreshCcw, 
+  Zap, 
+  User,
+  AlertCircle,
+  Settings,
+  Flame,
+  Info
+} from 'lucide-react';
 
 const App = () => {
+  // --- States ---
   const [messages, setMessages] = useState([
-    { role: 'assistant', content: 'สวัสดีครับพี่ๆ ทีมงาน! ระบบฐานข้อมูลเครื่อง Domae Auto Thermal Welding พร้อมใช้งานแล้วครับ มีปัญหาตรงไหน หรือต้องการดูพารามิเตอร์อะไร พิมพ์ถามมาได้เลยครับ 🏭🔥' }
+    { 
+      role: 'assistant', 
+      content: 'สวัสดีครับพี่ๆ ทีมงาน! ผมคือระบบช่วยตอบคำถามเทคนิค Domae Auto Thermal Welding Machine พัฒนาโดยคุณ Rattanachot S. มีปัญหาหน้างานตรงไหนถามได้เลยครับ 🏭🔥' 
+    }
   ]);
   const [inputText, setInputText] = useState('');
   const [sheetKnowledge, setSheetKnowledge] = useState('');
   const [isGenerating, setIsGenerating] = useState(false);
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
-  const [isKnowledgeReady, setIsKnowledgeReady] = useState(false);
+  const [syncStatus, setSyncStatus] = useState('idle'); // idle, loading, success, error
   const messagesEndRef = useRef(null);
 
-  // ใส่ API Key ของ Gemini ตรงนี้
-  const myKey = import.meta.env.VITE_GEMINI_API_KEY; 
-  // ลิงก์ SheetDB 
+  // --- Configuration ---
+  const apiKey = ""; // The platform handles the API key automatically
   const sheetDB_URL = "https://sheetdb.io/api/v1/dg3h9mlyf4s6q"; 
 
+  // --- Helpers ---
+  const scrollToBottom = () => {
+    messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
+  };
+
   useEffect(() => {
-    fetch(sheetDB_URL).then(res => res.json()).then(data => {
-      const allInfo = data.map(item => item.knowledge_data).join('\n---\n');
-      setSheetKnowledge(allInfo);
-      setIsKnowledgeReady(true);
-    }).catch(err => {
-      console.error("โหลดข้อมูลไม่สำเร็จ");
-      setIsKnowledgeReady(false);
-    });
+    scrollToBottom();
+  }, [messages]);
+
+  // --- Knowledge Sync Logic ---
+  const fetchKnowledge = async () => {
+    setSyncStatus('loading');
+    try {
+      const res = await fetch(sheetDB_URL);
+      if (!res.ok) throw new Error("Connection failed");
+      const data = await res.json();
+      
+      if (Array.isArray(data)) {
+        const allInfo = data.map(item => item.knowledge_data || item.Knowledge || "").filter(Boolean).join('\n---\n');
+        setSheetKnowledge(allInfo);
+        setSyncStatus('success');
+      } else {
+        throw new Error("Invalid data format");
+      }
+    } catch (err) {
+      console.error("Knowledge Sync Error:", err);
+      setSyncStatus('error');
+    }
+  };
+
+  useEffect(() => {
+    fetchKnowledge();
   }, []);
 
-  useEffect(() => { messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }); }, [messages]);
-
+  // --- AI Chat Logic ---
   const handleSubmit = async (e, quickText = null) => {
     if (e) e.preventDefault();
     const textToSend = quickText || inputText;
@@ -41,154 +81,222 @@ const App = () => {
     setInputText('');
     setIsGenerating(true);
 
-    try {
-      const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${myKey}`;
-      const systemPrompt = `คุณคือวิศวกรผู้ช่วยส่วนตัวที่ถูกพัฒนาโดย Rattanachot S. มีหน้าที่ช่วยเหลือช่างเทคนิคหน้างานในการควบคุมเครื่อง "Domae Auto Thermal Welding machine" 
-      ตอบคำถามโดยอ้างอิงจากข้อมูลนี้เท่านั้น:\n${sheetKnowledge}\n
-      กฎสำคัญ: 
-      1. หากไม่มีข้อมูลในฐานข้อมูล ให้บอกอย่างสุภาพว่า "ยังไม่มีข้อมูลส่วนนี้บันทึกไว้ครับ รบกวนติดต่อวิศวกรผู้ดูแล"
-      2. ใช้คำพูดเป็นกันเอง ให้เกียรติช่างหน้างาน (เรียกผู้ใช้ว่า "พี่ๆ" หรือ "พี่ช่าง")
-      3. ผู้ใช้ถามภาษาไหน (ไทย/English) ให้ตอบกลับเป็นภาษานั้นเสมอ`;
+    const fetchWithRetry = async (retries = 0) => {
+      try {
+        const systemPrompt = `คุณคือวิศวกรผู้ช่วยส่วนตัว (Senior Engineering Assistant) พัฒนาโดย Rattanachot S. 
+        สำหรับพี่ๆ ช่างหน้างานเครื่อง "Domae Auto Thermal Welding Machine"
+        จงตอบคำถามโดยอ้างอิงข้อมูลนี้เท่านั้น:\n${sheetKnowledge}\n
+        
+        กฎการทำงาน:
+        1. หากไม่มีข้อมูลในฐานข้อมูล ให้บอกอย่างสุภาพว่า "ข้อมูลส่วนนี้ยังไม่ได้บันทึกไว้ในระบบครับ รบกวนแจ้งคุณ Rattanachot S. เพื่ออัปเดต"
+        2. ถามไทยตอบไทย ถามอังกฤษตอบอังกฤษ (Always respond in the same language as the user)
+        3. ใช้คำพูดให้เกียรติช่างหน้างาน (เรียกผู้ใช้ว่า "พี่ๆ" หรือ "พี่ช่าง")
+        4. หากเป็นค่าพารามิเตอร์ ให้สรุปเป็นข้อๆ ให้ชัดเจนอ่านง่าย`;
 
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ contents: [{ parts: [{ text: `${systemPrompt}\n\nคำถาม: ${textToSend}` }] }] })
-      });
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        
+        const response = await fetch(url, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            contents: [{ parts: [{ text: `${systemPrompt}\n\nคำถาม: ${textToSend}` }] }]
+          })
+        });
 
-      const result = await response.json();
-      setMessages(prev => [...prev, { role: 'assistant', content: result.candidates[0].content.parts[0].text }]);
-    } catch (err) {
-      setMessages(prev => [...prev, { role: 'assistant', content: "ขออภัยครับพี่ ระบบขัดข้องนิดหน่อย ลองใหม่อีกครั้งนะครับ 🔧" }]);
-    } finally {
-      setIsGenerating(false);
-    }
+        if (!response.ok) throw new Error(`API Status: ${response.status}`);
+
+        const result = await response.json();
+        const botResponse = result?.candidates?.[0]?.content?.parts?.[0]?.text;
+        
+        if (typeof botResponse === 'string') {
+          setMessages(prev => [...prev, { role: 'assistant', content: botResponse }]);
+        } else {
+          throw new Error("Invalid response format");
+        }
+      } catch (err) {
+        if (retries < 5) {
+          const delay = Math.pow(2, retries) * 1000;
+          setTimeout(() => fetchWithRetry(retries + 1), delay);
+        } else {
+          setMessages(prev => [...prev, { 
+            role: 'assistant', 
+            content: "ขออภัยครับพี่ ระบบประมวลผลขัดข้องชั่วคราว รบกวนลองตรวจสอบการเชื่อมต่ออินเทอร์เน็ต หรือกดปุ่มรีเฟรชข้อมูลที่แถบด้านซ้ายนะครับ" 
+          }]);
+        }
+      } finally {
+        setIsGenerating(false);
+      }
+    };
+
+    fetchWithRetry();
   };
 
   return (
-    <div className="flex h-screen bg-slate-100 text-slate-900 font-sans overflow-hidden">
+    <div className="flex h-screen bg-[#050505] text-slate-300 font-sans overflow-hidden">
       
-      {/* Sidebar Overlay สำหรับมือถือ */}
+      {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/50 z-40 md:hidden" 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden transition-opacity" 
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <aside className={`fixed md:static inset-y-0 left-0 w-72 bg-amber-950 text-amber-50 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50 flex flex-col shadow-xl`}>
-        <div className="p-6 flex items-center justify-between border-b border-amber-900/50">
+      <aside className={`fixed md:static inset-y-0 left-0 w-72 bg-[#0d0d0f] border-r border-amber-900/20 transform ${isSidebarOpen ? 'translate-x-0' : '-translate-x-full'} md:translate-x-0 transition-transform duration-300 ease-in-out z-50 flex flex-col shadow-2xl`}>
+        <div className="p-6 border-b border-amber-900/10 flex items-center justify-between bg-amber-500/5">
           <div className="flex items-center space-x-3">
-            <div className="bg-amber-500/20 p-2 rounded-lg">
-              <Factory size={28} className="text-amber-500" />
+            <div className="bg-gradient-to-br from-amber-400 to-amber-600 p-2.5 rounded-xl shadow-lg shadow-amber-500/20">
+              <Factory size={24} className="text-zinc-950" />
             </div>
-            <h1 className="text-lg font-bold leading-tight">Domae Auto<br/>Thermal Welding</h1>
+            <div>
+              <h1 className="text-sm font-bold text-white tracking-tight uppercase leading-none">Domae Auto</h1>
+              <p className="text-[10px] text-amber-500 font-bold uppercase tracking-tighter mt-1">Welding Machine</p>
+            </div>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-amber-400 p-1">
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
         
-        <div className="p-6 flex-1">
-          <p className="text-sm text-amber-200/70 mb-6 uppercase tracking-wider font-semibold">System Status</p>
-          
-          <div className="space-y-4">
-            <div className="flex items-center space-x-3 bg-amber-900/30 p-3 rounded-xl border border-amber-800/50">
-              <ShieldCheck size={20} className="text-amber-500" />
-              <div className="flex-1">
-                <p className="text-sm font-medium">Database Sync</p>
-                <p className="text-xs text-amber-400/70">{isKnowledgeReady ? 'Connected via SheetDB' : 'Connecting...'}</p>
+        <div className="p-5 flex-1 space-y-6 overflow-y-auto no-scrollbar">
+          <div className="space-y-3">
+            <p className="text-[10px] text-slate-500 font-bold uppercase tracking-widest px-1 flex items-center gap-2">
+              <Settings size={12} /> System Status
+            </p>
+            <div className={`flex items-center space-x-3 p-3 rounded-xl border transition-all ${syncStatus === 'success' ? 'bg-amber-500/5 border-amber-500/20' : 'bg-zinc-900/50 border-slate-800'}`}>
+              <div className="relative flex items-center justify-center h-3 w-3">
+                {syncStatus === 'loading' && <span className="animate-ping absolute h-full w-full rounded-full bg-amber-400 opacity-75"></span>}
+                <span className={`relative rounded-full h-2 w-2 ${
+                  syncStatus === 'success' ? 'bg-amber-500 shadow-[0_0_8px_rgba(245,158,11,0.8)]' : 
+                  syncStatus === 'loading' ? 'bg-yellow-500' : 'bg-rose-500'
+                }`}></span>
               </div>
-              <div className={`w-2.5 h-2.5 rounded-full ${isKnowledgeReady ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></div>
+              <div className="flex-1 min-w-0">
+                <p className="text-xs font-semibold text-slate-300">Database Sync</p>
+                <p className="text-[10px] text-slate-500 truncate">{syncStatus === 'success' ? 'Knowledge Ready' : 'Connecting...'}</p>
+              </div>
+              <button onClick={fetchKnowledge} disabled={syncStatus === 'loading'} className="p-1.5 hover:bg-slate-800 rounded-lg text-amber-500 transition-colors">
+                <RefreshCcw size={14} className={syncStatus === 'loading' ? 'animate-spin' : ''} />
+              </button>
             </div>
           </div>
         </div>
 
-        {/* ตัด Support Info ออก และดัน Credit ลงมาล่างสุดแบบคลีนๆ */}
-        <div className="p-6 border-t border-amber-900/50 bg-amber-950">
-          <p className="text-xs text-amber-500/50 text-center font-mono">DEV BY RATTANACHOT S.</p>
+        <div className="p-6 border-t border-amber-900/10 bg-black/20 text-center">
+            <p className="text-[9px] text-slate-500 font-bold uppercase tracking-[0.3em]">DEV BY RATTANACHOT S.</p>
         </div>
       </aside>
 
-      {/* Main Chat Area */}
-      <main className="flex-1 flex flex-col h-full bg-slate-50 relative w-full">
+      {/* Main Area */}
+      <main className="flex-1 flex flex-col h-full bg-[#080809] relative">
         {/* Header */}
-        <header className="h-16 bg-white shadow-sm flex items-center px-4 justify-between border-b border-slate-200 shrink-0">
-          <div className="flex items-center space-x-3">
-            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-500 hover:bg-slate-100 rounded-lg">
+        <header className="h-16 bg-[#0c0c0e]/80 backdrop-blur-xl border-b border-slate-800/50 flex items-center px-4 md:px-8 justify-between shrink-0 z-30">
+          <div className="flex items-center space-x-4">
+            <button onClick={() => setIsSidebarOpen(true)} className="md:hidden p-2 text-slate-400 hover:bg-zinc-800 rounded-xl transition-all">
               <Menu size={24} />
             </button>
             <div className="flex items-center space-x-2">
-              <Bot size={24} className="text-amber-600" />
-              <h2 className="font-bold text-slate-800">Welding Assistant AI</h2>
+              <Zap size={20} className="text-amber-500" />
+              <h2 className="text-xs md:text-sm font-bold text-slate-100 tracking-tight">Technical Knowledge <span className="hidden sm:inline text-slate-600 mx-1">|</span> <span className="text-amber-500 uppercase">Auto Thermal Welding Machine</span></h2>
             </div>
+          </div>
+          <div className="hidden sm:flex items-center space-x-2 px-3 py-1.5 rounded-full border border-slate-800 bg-zinc-900">
+             <ShieldCheck size={14} className="text-emerald-500" />
+             <span className="text-[10px] font-bold text-slate-500">STAFF PORTAL</span>
           </div>
         </header>
 
-        {/* Chat Messages */}
-        <div className="flex-1 overflow-y-auto p-4 md:p-6 space-y-6">
+        {/* Chat Area */}
+        <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 no-scrollbar bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-amber-500/5 via-transparent to-transparent">
           {messages.map((m, i) => (
-            <div key={i} className={`flex ${m.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-              <div className={`max-w-[90%] md:max-w-[75%] p-4 rounded-2xl shadow-sm text-sm md:text-base leading-relaxed ${m.role === 'user' ? 'bg-amber-600 text-white rounded-br-none' : 'bg-white border border-slate-200 text-slate-800 rounded-bl-none'}`}>
+            <div key={i} className={`flex gap-3 md:gap-4 max-w-4xl mx-auto ${m.role === 'user' ? 'flex-row-reverse' : ''} animate-in fade-in slide-in-from-bottom-2 duration-300`}>
+              <div className={`w-9 h-9 md:w-10 md:h-10 rounded-2xl flex-shrink-0 flex items-center justify-center shadow-2xl ${
+                m.role === 'user' ? 'bg-zinc-800 border border-slate-700 text-slate-400' : 'bg-gradient-to-br from-amber-500 to-amber-700 text-zinc-950'
+              }`}>
+                {m.role === 'user' ? <User size={18} /> : <Bot size={22} />}
+              </div>
+              <div className={`max-w-[85%] md:max-w-[75%] p-4 md:p-5 rounded-3xl shadow-xl leading-relaxed text-sm md:text-base ${
+                m.role === 'user' 
+                  ? 'bg-amber-600/10 border border-amber-500/20 text-slate-100 rounded-tr-none' 
+                  : 'bg-[#121214] border border-slate-800 text-slate-200 rounded-tl-none border-l-4 border-l-amber-600'
+              }`}>
                 {m.content}
+                <div className={`text-[10px] mt-2 font-bold ${m.role === 'user' ? 'text-amber-500/40 text-right' : 'text-slate-500'}`}>
+                   {new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
               </div>
             </div>
           ))}
           {isGenerating && (
-            <div className="flex justify-start">
-              <div className="bg-white border border-slate-200 p-4 rounded-2xl rounded-bl-none shadow-sm flex items-center space-x-2">
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce"></div>
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></div>
-                <div className="w-2 h-2 bg-amber-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></div>
+            <div className="flex gap-4 max-w-4xl mx-auto animate-pulse">
+              <div className="w-10 h-10 rounded-2xl bg-amber-600/20 border border-amber-500/30 flex items-center justify-center text-amber-500">
+                <Bot size={22} />
+              </div>
+              <div className="bg-[#121214] border border-slate-800 p-5 rounded-3xl rounded-tl-none border-l-4 border-l-amber-600 shadow-xl flex items-center space-x-2">
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce"></div>
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:0.2s]"></div>
+                <div className="w-1.5 h-1.5 bg-amber-500 rounded-full animate-bounce [animation-delay:0.4s]"></div>
               </div>
             </div>
           )}
-          <div ref={messagesEndRef} />
+          <div ref={messagesEndRef} className="h-4" />
         </div>
 
-        {/* Input Area */}
-        <footer className="bg-white border-t border-slate-200 p-4 shrink-0">
-          <div className="max-w-4xl mx-auto flex flex-col space-y-3">
+        {/* Input Controls */}
+        <footer className="p-4 md:p-10 bg-gradient-to-t from-black to-transparent">
+          <div className="max-w-4xl mx-auto space-y-4">
             
-            {/* Quick Replies */}
-            <div className="flex overflow-x-auto pb-2 scrollbar-hide">
+            {/* Quick Reply Button */}
+            <div className="flex overflow-x-auto no-scrollbar">
               <button 
                 onClick={() => handleSubmit(null, "Standard parameter")}
-                disabled={isGenerating}
-                className="whitespace-nowrap bg-amber-50 text-amber-700 border border-amber-200 px-4 py-2 rounded-full text-sm font-medium hover:bg-amber-100 transition-colors disabled:opacity-50"
+                disabled={isGenerating || syncStatus !== 'success'}
+                className="whitespace-nowrap flex items-center gap-2 bg-amber-500/10 hover:bg-amber-500/20 text-amber-500 border border-amber-500/20 px-5 py-2.5 rounded-full text-xs font-bold transition-all disabled:opacity-30 active:scale-95 shadow-lg"
               >
-                ⚡ Standard parameter
+                <Flame size={14} /> Standard parameter
               </button>
             </div>
 
-            {/* Chat Form */}
-            <form onSubmit={(e) => handleSubmit(e)} className="flex items-end space-x-2">
-              <textarea 
-                value={inputText} 
-                onChange={(e)=>setInputText(e.target.value)} 
-                onKeyDown={(e) => {
-                  if (e.key === 'Enter' && !e.shiftKey) {
-                    e.preventDefault();
-                    handleSubmit(e);
-                  }
-                }}
-                rows="1"
-                className="flex-1 border border-slate-300 p-3 md:p-4 rounded-2xl focus:ring-2 focus:ring-amber-500 focus:border-amber-500 outline-none bg-slate-50 resize-none max-h-32 text-sm md:text-base" 
-                placeholder="พิมพ์คำถาม หรือระบุปัญหาที่พบ..." 
-              />
-              <button 
-                type="submit"
-                disabled={isGenerating || !inputText.trim()} 
-                className="bg-amber-600 text-white p-3 md:p-4 rounded-2xl font-bold hover:bg-amber-700 disabled:opacity-50 disabled:bg-slate-300 transition-colors flex items-center justify-center h-[52px] w-[52px] md:h-[56px] md:w-[56px] shrink-0"
-              >
-                <Send size={20} />
-              </button>
+            {/* Input Form */}
+            <form onSubmit={(e) => handleSubmit(e)} className="relative group">
+              <div className="absolute -inset-1 bg-amber-500/20 rounded-[2rem] blur opacity-0 group-focus-within:opacity-100 transition duration-500"></div>
+              <div className="relative bg-[#121214] border border-slate-800 p-2 rounded-[1.8rem] flex items-end gap-2 shadow-2xl transition-all focus-within:border-amber-500/50">
+                <textarea 
+                  value={inputText} 
+                  onChange={(e)=>setInputText(e.target.value)} 
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                      e.preventDefault();
+                      handleSubmit(e);
+                    }
+                  }}
+                  rows="1"
+                  className="flex-1 bg-transparent border-none p-3.5 focus:ring-0 resize-none max-h-32 text-sm md:text-base text-slate-200 placeholder:text-slate-700 no-scrollbar" 
+                  placeholder="ถามปัญหาหน้างาน หรือเช็คพารามิเตอร์..." 
+                />
+                <button 
+                  type="submit"
+                  disabled={isGenerating || !inputText.trim()} 
+                  className="bg-amber-600 text-zinc-950 p-3.5 rounded-2xl hover:bg-amber-500 disabled:opacity-20 disabled:grayscale transition-all active:scale-90 shadow-lg shadow-amber-600/20 mb-0.5 mr-0.5"
+                >
+                  <Send size={20} />
+                </button>
+              </div>
             </form>
+            
+            <p className="text-center text-[9px] text-slate-700 font-bold uppercase tracking-[0.4em]">
+                Domae Auto Thermal Assistant v3.1 <span className="mx-2 text-amber-900">|</span> Provided by Rattanachot S.
+            </p>
           </div>
         </footer>
 
       </main>
+
+      <style>{`
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+      `}</style>
     </div>
   );
 };
