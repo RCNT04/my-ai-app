@@ -8,7 +8,7 @@ const App = () => {
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
-      content: 'สวัสดีครับพี่ๆ ทีมงาน! ระบบ Domae Auto Thermal Welding Machine (v3.1) พร้อมลุยครับ พัฒนาโดยคุณ Rattanachot S. มีคำถามเรื่องพารามิเตอร์หรือปัญหาหน้างาน พิมพ์ถามหรือกดปุ่ม Standard parameter ได้เลยครับ! 🏭🔥' 
+      content: 'สวัสดีครับพี่ๆ ทีมงาน! ผู้ช่วย Domae Auto Thermal Welding Machine พร้อมลุยครับ มีปัญหาหน้างาน พิมพ์ถามได้เลยครับ! 🏭🔥' 
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -67,7 +67,7 @@ const App = () => {
       const systemPrompt = `คุณคือวิศวกรผู้ช่วยอาวุโส พัฒนาโดยคุณ "บอล รัตนโชติ" (Rattanachot S.) 
       ช่วยเหลือทีมช่างเครื่อง "Domae Auto Thermal Welding Machine"
       ตอบคำถามโดยใช้ฐานความรู้: ${sheetKnowledge || "ยังไม่มีข้อมูล"}
-      กฎ: 1.ไม่มีข้อมูลให้บอกให้ติดต่อคุณ Rattanachot S. 2.เรียกผู้ใช้ว่า "พี่ช่าง" 3.ตอบเป็นข้อๆ`;
+      กฎ: 1.ไม่มีข้อมูลให้บอกให้ติดต่อคุณ Rattanachot S. 2.เรียกผู้ใช้ว่า "พี่" 3.ตอบเป็นข้อๆ`;
 
       // อัปเดต Model เป็น Gemini 3.1 Flash Lite Preview ตามที่พี่บอลสั่ง
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
