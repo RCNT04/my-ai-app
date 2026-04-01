@@ -20,7 +20,7 @@ const App = () => {
   const [messages, setMessages] = useState([
     { 
       role: 'assistant', 
-      content: 'สวัสดีครับพี่ๆ ทีมงาน! ระบบ Domae Auto Thermal Welding Machine พร้อมลุยครับ พัฒนาโดยคุณ Rattanachot S. มีคำถามเรื่องปัญหาหน้างาน พิมพ์ถามได้เลยครับ! 🏭🔥' 
+      content: 'สวัสดีครับพี่ๆ ทีมงาน! ระบบ Domae Auto Thermal Welding Machine (v3.1) พร้อมลุยครับ พัฒนาโดยคุณ Rattanachot S. มีคำถามเรื่องพารามิเตอร์หรือปัญหาหน้างาน พิมพ์ถามหรือกดปุ่ม Standard parameter ได้เลยครับ! 🏭🔥' 
     }
   ]);
   const [inputText, setInputText] = useState('');
@@ -30,9 +30,9 @@ const App = () => {
   const [syncStatus, setSyncStatus] = useState('idle'); // idle, loading, success, error
   const messagesEndRef = useRef(null);
 
-  // --- CONFIGURATION ---
-  // API Key will be injected by the environment safely
-  const myKey = import.meta.env.VITE_GEMINI_API_KEY;
+  // --- CONFIGURATION (Safe Environment Mode) ---
+  // ปล่อยค่าว่างไว้ ระบบหลังบ้านจะจัดการ Key ให้อัตโนมัติและปลอดภัยที่สุดครับ
+  const apiKey = ""; 
   const sheetDB_URL = "https://sheetdb.io/api/v1/dg3h9mlyf4s6q"; 
 
   // --- AUTO SCROLL ---
@@ -72,7 +72,7 @@ const App = () => {
     fetchKnowledge();
   }, []);
 
-  // --- AI HANDLER (Gemini 2.5 Flash Preview) ---
+  // --- AI HANDLER (Gemini 3.1 Flash Lite Preview) ---
   const handleSubmit = async (e, quickText = null) => {
     if (e) e.preventDefault();
     const textToSend = quickText || inputText;
@@ -99,13 +99,15 @@ const App = () => {
         3. เรียกผู้ใช้ว่า "พี่ๆ" หรือ "พี่ช่าง" เพื่อให้เกียรติทีมงานหน้างาน
         4. จัดรูปแบบคำตอบให้เป็นข้อๆ (Bullet points) ให้อ่านง่ายบนจอมือถือหน้างาน`;
 
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-preview-09-2025:generateContent?key=${apiKey}`;
+        // อัปเกรดเครื่องยนต์เป็น 3.1 Flash Lite ตามคำสั่งเพื่อนบอล!
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
         
         const response = await fetch(url, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            contents: [{ parts: [{ text: `${systemPrompt}\n\nคำถามจากพี่ช่าง: ${textToSend}` }] }]
+            contents: [{ parts: [{ text: textToSend }] }],
+            systemInstruction: { parts: [{ text: systemPrompt }] }
           })
         });
 
@@ -129,7 +131,7 @@ const App = () => {
         } else {
           setMessages(prev => [...prev, { 
             role: 'assistant', 
-            content: `❌ ระบบขัดข้อง: ${err.message}. รบกวนพี่ๆ เช็คอินเทอร์เน็ต หรือกดปุ่มรีเฟรชฐานข้อมูลที่แถบด้านซ้ายนะครับ` 
+            content: `❌ ระบบประมวลผลขัดข้อง (${err.message}). รบกวนพี่ๆ เช็คอินเทอร์เน็ต หรือกดปุ่มรีเฟรชฐานข้อมูลที่แถบด้านซ้ายนะครับ` 
           }]);
         }
       } finally {
@@ -146,7 +148,7 @@ const App = () => {
       {/* Mobile Sidebar Overlay */}
       {isSidebarOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden" 
+          className="fixed inset-0 bg-black/80 backdrop-blur-sm z-40 md:hidden transition-opacity" 
           onClick={() => setIsSidebarOpen(false)}
         />
       )}
@@ -163,7 +165,7 @@ const App = () => {
               <p className="text-[10px] text-amber-500 font-bold uppercase tracking-tighter mt-1 leading-tight">Thermal Welding Machine</p>
             </div>
           </div>
-          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 hover:text-white">
+          <button onClick={() => setIsSidebarOpen(false)} className="md:hidden text-slate-500 hover:text-white transition-colors">
             <X size={24} />
           </button>
         </div>
