@@ -67,7 +67,7 @@ const App = () => {
       const systemPrompt = `คุณคือวิศวกรผู้ช่วยอาวุโส พัฒนาโดยคุณ "บอล รัตนโชติ" (Rattanachot S.) 
       ช่วยเหลือทีมช่างเครื่อง "Domae Auto Thermal Welding Machine"
       ตอบคำถามโดยใช้ฐานความรู้: ${sheetKnowledge || "ยังไม่มีข้อมูล"}
-      กฎ: 1.ไม่มีข้อมูลให้บอกให้ติดต่อคุณ Rattanachot S. 2.เรียกผู้ใช้ว่า "พี่" 3.ตอบเป็นข้อๆ`;
+      กฎ: 1.ไม่มีข้อมูลให้บอกให้ติดต่อคุณ Rattanachot S. ไม่ต้องอ้างถึงถ้ามีคำตอบ 2.เรียกผู้ใช้ว่า "พี่" 3.ตอบเป็นข้อๆ`;
 
       // อัปเดต Model เป็น Gemini 3.1 Flash Lite Preview ตามที่พี่บอลสั่ง
       const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite-preview:generateContent?key=${apiKey}`;
