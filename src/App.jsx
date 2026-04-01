@@ -32,7 +32,7 @@ const App = () => {
 
   // --- CONFIGURATION ---
   // API Key will be injected by the environment safely
-  const apiKey = ""; 
+  const myKey = import.meta.env.VITE_GEMINI_API_KEY;
   const sheetDB_URL = "https://sheetdb.io/api/v1/dg3h9mlyf4s6q"; 
 
   // --- AUTO SCROLL ---
