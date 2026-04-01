@@ -20,7 +20,7 @@ const App = () => {
 
   // --- CONFIGURATION ---
   // แก้ไขปัญหาเป๊ะๆ: ใช้ชื่อโมเดลรุ่นล่าสุดและจัดการ Key ผ่านระบบที่รองรับ
-  const apiKey = ""; 
+  const apiKey = import.meta.env.VITE_GEMINI_API_KEY; 
   const sheetDB_URL = "https://sheetdb.io/api/v1/dg3h9mlyf4s6q"; 
 
   const scrollToBottom = () => {
