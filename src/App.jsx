@@ -32,7 +32,8 @@ const App = () => {
 
   // --- CONFIGURATION (Safe Environment Mode) ---
   // ปล่อยค่าว่างไว้ ระบบหลังบ้านจะจัดการ Key ให้อัตโนมัติและปลอดภัยที่สุดครับ
-  const apiKey = ""; 
+  const myKey = import.meta.env.VITE_GEMINI_API_KEY; 
+  // ลิงก์ SheetDB
   const sheetDB_URL = "https://sheetdb.io/api/v1/dg3h9mlyf4s6q"; 
 
   // --- AUTO SCROLL ---
